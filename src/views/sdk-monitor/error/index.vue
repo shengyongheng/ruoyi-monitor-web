@@ -1,7 +1,5 @@
 <template>
-    <div>
-        错误监控
-    </div>
+    <div class="app-container">错误监控</div>
 </template>
 
 <script setup>

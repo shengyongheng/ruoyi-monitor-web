@@ -1,7 +1,5 @@
 <template>
-    <div>
-        资源监控
-    </div>
+    <div class="app-container">资源监控</div>
 </template>
 
 <script setup>

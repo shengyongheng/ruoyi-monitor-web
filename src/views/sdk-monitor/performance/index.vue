@@ -1,7 +1,5 @@
 <template>
-    <div>
-        性能监控
-    </div>
+    <div class="app-container">性能监控</div>
 </template>
 
 <script setup>
