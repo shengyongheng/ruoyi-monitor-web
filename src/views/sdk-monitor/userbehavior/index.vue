@@ -1,6 +1,7 @@
 <template>
     <div class="app-container">
         <h2>用户行为监控</h2>
+        <div class="desc">追踪用户交互、会话</div>
         <el-form ref="ruleFormRef" inline :model="ruleForm" status-icon :rules="rules" label-width="auto"
             class="userbehavior-ruleForm">
             <el-form-item label="时间范围" prop="datetimeRange">
@@ -102,48 +103,24 @@
                         <div class="card-title">行为时间轴</div>
 
                         <el-timeline>
-                            <el-timeline-item v-for="item in behaviorTimeline" :key="item.time" :timestamp="item.time"
-                                placement="top" :type="item.type">
+                            <el-timeline-item v-for="item in behaviorTimeline" :key="item.timestamp"
+                                :timestamp="parseTime(item.timestamp)" placement="top" :type="item.type"
+                                :color="item.color || '#0bbd87'"
+                                @click="activeBehaviorDetail(item.behaviorId, item.behaviorType)">
                                 <div class="timeline-content">
-                                    <span class="text">{{ item.text }}</span>
-                                    <span v-if="item.tag" class="tag">{{ item.tag }}</span>
+                                    <span class="text">{{ item.behaviorType }}</span>
+                                    <span v-if="item.description" class="tag">{{ item.description }}</span>
                                 </div>
                             </el-timeline-item>
                         </el-timeline>
                     </el-card>
 
                     <!-- ===== Side Detail ===== -->
-                    <el-card class="side-card">
-                        <div class="side-header">行为详情</div>
-
-                        <div class="side-body">
-                            <div class="section-title">点击行为</div>
-
-                            <div class="kv">
-                                <span>时间：</span>
-                                <b>{{ activeDetail.time }}</b>
-                            </div>
-                            <div class="kv">
-                                <span>页面：</span>
-                                <span class="link">{{ activeDetail.page }}</span>
-                            </div>
-                            <div class="kv">
-                                <span>描述：</span>
-                                <span>{{ activeDetail.desc }}</span>
-                            </div>
-
-                            <el-divider />
-
-                            <div class="kv">
-                                <span>元素：</span>
-                                <el-tag type="primary">{{ activeDetail.element }}</el-tag>
-                            </div>
-                        </div>
-                    </el-card>
+                    <userbehavior-detail :activeDetail="activeDetail"></userbehavior-detail>
                 </div>
 
                 <!-- ================= Footer ================= -->
-                <!-- <el-card class="footer-card">
+                <el-card class="footer-card">
                     <div class="card-title">页面轨迹</div>
                     <div class="route-flow">
                         <el-tag type="info">/home</el-tag>
@@ -156,7 +133,7 @@
                         </el-icon>
                         <el-tag type="info">/order#details</el-tag>
                     </div>
-                </el-card> -->
+                </el-card>
 
             </div>
         </div>
@@ -164,8 +141,10 @@
 </template>
 
 <script setup>
-import { listSessions, sessionsDetail } from '@/api/sdk-monitor/userbehavior'
+import { getBehaviorDetail, getBehaviorTimeline, listSessions, sessionsDetail } from '@/api/sdk-monitor/userbehavior'
+import { parseTime } from "@/utils/ruoyi"
 import { onMounted, reactive, ref } from 'vue'
+import userbehaviorDetail from './userbehaviorDetail.vue'
 
 const ruleFormRef = ref()
 
@@ -248,9 +227,23 @@ const conversations = ref([])
 
 const session = ref({})
 
+const behaviorTimeline = ref([])
+
 const sessionDetail = ref({
     username: "",
     sessionId: "",
+})
+
+const activeDetail = ref({
+    behaviorId: null,
+    behaviorType: null,
+    description: null,
+    hashStayTime: null,
+    newUrl: null,
+    oldUrl: null,
+    stayTime: null,
+    timestamp: null,
+    trigerType: null,
 })
 
 onMounted(() => {
@@ -260,6 +253,7 @@ onMounted(() => {
         type: ruleForm.type,
     }).then((res) => {
         conversations.value = res.data;
+        conversations.value[0].active = true;
 
         const sessionsDetailParams = {
             username: conversations.value[0]?.username,
@@ -267,6 +261,14 @@ onMounted(() => {
         }
         sessionsDetail(sessionsDetailParams).then((res) => {
             session.value = res.data;
+            getBehaviorTimeline({
+                username: res.data.username,
+                sessionId: res.data.sessionId,
+            }).then((res) => {
+                behaviorTimeline.value = res.data;
+            }).catch((err) => {
+                console.error('Failed to fetch behavior timeline:', err);
+            });
         }).catch((err) => {
             console.error('Failed to fetch session details:', err);
         });
@@ -275,22 +277,16 @@ onMounted(() => {
     });
 })
 
-const behaviorTimeline = ref([
-    { time: '09:32:10', text: '进入页面', tag: '/home', type: 'primary' },
-    { time: '09:32:18', text: '点击 按钮', tag: '#submit', type: 'warning' },
-    { time: '09:32:25', text: '在 INPUT #username 输入', tag: '"admin"', type: 'success' },
-    { time: '09:33:00', text: '滚动了', tag: 'DIV.content', type: 'info' },
-    { time: '09:33:15', text: '路由变化 pushState', tag: '/order', type: 'primary' },
-    { time: '09:34:20', text: 'Hash 变化', tag: '#order → #details', type: 'success' },
-    { time: '09:44:42', text: '页面停留', tag: '11分32秒', type: 'danger' }
-])
-
-const activeDetail = ref({
-    time: '09:32:18',
-    page: '/home',
-    desc: '点击了 按钮 #submit (提交)',
-    element: 'BUTTON #submit'
-})
+function activeBehaviorDetail(behaviorId, behaviorType) {
+    getBehaviorDetail({
+        behaviorId: behaviorId,
+        behaviorType: behaviorType,
+    }).then((res) => {
+        activeDetail.value = res.data;
+    }).catch((err) => {
+        console.error('Failed to fetch behavior detail:', err);
+    });
+}
 
 function setActive(target) {
     conversations.value.forEach(i => {
@@ -302,6 +298,14 @@ function setActive(target) {
     }
     sessionsDetail(sessionDetail.value).then((res) => {
         session.value = res.data;
+        getBehaviorTimeline({
+            username: res.data.username,
+            sessionId: res.data.sessionId,
+        }).then((res) => {
+            behaviorTimeline.value = res.data;
+        }).catch((err) => {
+            console.error('Failed to fetch behavior timeline:', err);
+        });
     }).catch((err) => {
         console.error('Failed to fetch session details:', err);
     });
@@ -363,6 +367,11 @@ const shortcuts = [
 
 <style lang="scss" scoped>
 .app-container {
+    .desc {
+        color: #999;
+        padding-bottom: 16px;
+    }
+
     .userbehavior-monitor {
         display: flex;
         gap: 20px;
@@ -504,45 +513,6 @@ const shortcuts = [
                         padding: 2px 6px;
                         border-radius: 4px;
                         font-size: 12px;
-                    }
-                }
-            }
-
-            /* ---------- Side Card ---------- */
-            .side-card {
-                padding: 0;
-
-                .side-header {
-                    background: #409eff;
-                    color: #fff;
-                    padding: 10px 12px;
-                    font-weight: 600;
-                    border-radius: 12px 12px 0 0;
-                }
-
-                .side-body {
-                    padding: 12px;
-
-                    .section-title {
-                        font-weight: 600;
-                        margin-bottom: 8px;
-                    }
-
-                    .kv {
-                        font-size: 12px;
-                        margin-bottom: 6px;
-
-                        span {
-                            color: #606266;
-                        }
-
-                        b {
-                            color: #303133;
-                        }
-
-                        .link {
-                            color: #409eff;
-                        }
                     }
                 }
             }
