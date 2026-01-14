@@ -27,10 +27,10 @@
 </template>
 
 <script setup>
-import axios from 'axios'
+import { getToken } from "@/utils/auth"
 import { QuillEditor } from "@vueup/vue-quill"
 import "@vueup/vue-quill/dist/vue-quill.snow.css"
-import { getToken } from "@/utils/auth"
+import axios from 'axios'
 
 const { proxy } = getCurrentInstance()
 
