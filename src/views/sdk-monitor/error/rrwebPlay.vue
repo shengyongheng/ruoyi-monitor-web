@@ -29,7 +29,7 @@ onMounted(() => {
         new rrwebPlayer({
             target: rrwebPlayRef.value,
             props: {
-                events: JSON.parse(res.data.events || ""),
+                events: JSON.parse(res.data.events || "[{}, {}]"),
             },
         });
     }).catch(err => {

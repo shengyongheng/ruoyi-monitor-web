@@ -2,11 +2,71 @@
     <div class="app-container">
         <h2>资源监控</h2>
         <div class="desc">分析 JS、CSS、图片、字体等资源的加载性能</div>
+        <div class="metric-row">
+            <!-- 加速成功率 -->
+            <div class="metric-card">
+                <div class="card-title">加载成功率</div>
+                <div class="value green">95.3%</div>
+                <el-progress :percentage="95.3" :stroke-width="8" color="#67C23A" :show-text="false" />
+            </div>
+
+            <!-- 缓存命中率 -->
+            <div class="metric-card">
+                <div class="card-title">
+                    缓存命中率
+                    <el-icon>
+                        <InfoFilled />
+                    </el-icon>
+                </div>
+
+                <div class="value">72.5%</div>
+
+                <div class="multi-bar">
+                    <div class="hit" style="width: 60%"></div>
+                    <div class="miss" style="width: 12.5%"></div>
+                    <div class="empty"></div>
+                </div>
+
+                <div class="legend">
+                    <span><i class="dot hit"></i>命中</span>
+                    <span><i class="dot miss"></i>未命中</span>
+                </div>
+            </div>
+
+            <!-- 资源条数 -->
+            <div class="metric-card">
+                <div class="card-title">资源条数</div>
+                <div class="value">
+                    731
+                </div>
+
+                <div class="mini-bars">
+                    <span v-for="i in 12" :key="i" :class="{ peak: i === 7 }"></span>
+                </div>
+            </div>
+
+            <!-- 平均加载时间 -->
+            <div class="metric-card">
+                <div class="card-title">平均加载时间</div>
+                <div class="value blue">
+                    432 <span class="unit">ms</span>
+                </div>
+
+                <div class="multi-bars">
+                    <span class="gray"></span>
+                    <span class="blue"></span>
+                    <span class="yellow"></span>
+                    <span class="red"></span>
+                    <span class="yellow"></span>
+                    <span class="red"></span>
+                    <span class="blue"></span>
+                </div>
+            </div>
+        </div>
         <div class="resource-monitor">
             <el-card class="session-list" shadow="always">
                 <!-- Header -->
                 <div class="panel-header">会话列表</div>
-
                 <!-- List -->
                 <div class="list">
                     <div v-for="item in conversations" :key="item.sessionId" class="list-item"
@@ -85,8 +145,9 @@
 </template>
 
 <script setup>
-import * as echarts from 'echarts'
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { InfoFilled } from '@element-plus/icons-vue';
+import * as echarts from 'echarts';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 
 const conversations = ref([])
 
@@ -357,6 +418,151 @@ function resizeChart() {
     .desc {
         color: #999;
         padding-bottom: 16px;
+    }
+
+    .metric-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    /* 通用卡片 */
+    .metric-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 0 0 1px #ebeef5 inset;
+    }
+
+    .card-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #303133;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* 数值 */
+    .value {
+        font-size: 32px;
+        font-weight: 700;
+        margin: 8px 0;
+
+        &.green {
+            color: #67c23a;
+        }
+
+        &.blue {
+            color: #409eff;
+        }
+
+        .unit {
+            font-size: 14px;
+            font-weight: normal;
+        }
+
+        .up {
+            font-size: 16px;
+            color: #67c23a;
+        }
+    }
+
+    /* 缓存命中率 */
+    .multi-bar {
+        display: flex;
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 8px 0 10px;
+
+        .hit {
+            background: #67c23a;
+        }
+
+        .miss {
+            background: #f7ba2a;
+        }
+
+        .empty {
+            flex: 1;
+            background: #ebeef5;
+        }
+    }
+
+    .legend {
+        font-size: 12px;
+        color: #606266;
+        display: flex;
+        gap: 16px;
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+
+            &.hit {
+                background: #67c23a;
+            }
+
+            &.miss {
+                background: #f7ba2a;
+            }
+        }
+    }
+
+    /* 资源条数 */
+    .mini-bars {
+        display: flex;
+        gap: 6px;
+        align-items: flex-end;
+
+        span {
+            width: 8px;
+            height: 18px;
+            background: #cfe3ff;
+            border-radius: 2px;
+
+            &.peak {
+                height: 36px;
+                background: #409eff;
+            }
+        }
+    }
+
+    /* 平均加载时间 */
+    .multi-bars {
+        display: flex;
+        gap: 6px;
+        align-items: flex-end;
+
+        span {
+            width: 10px;
+            border-radius: 2px;
+        }
+
+        .gray {
+            height: 16px;
+            background: #ebeef5;
+        }
+
+        .blue {
+            height: 32px;
+            background: #409eff;
+        }
+
+        .yellow {
+            height: 26px;
+            background: #f7ba2a;
+        }
+
+        .red {
+            height: 22px;
+            background: #f56c6c;
+        }
     }
 
     .resource-monitor {

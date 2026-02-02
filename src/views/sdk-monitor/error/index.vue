@@ -4,6 +4,47 @@
     <div class="desc">
       追踪 JS Error / Promise Rejection 源代码上下文、Ajax / Fetch 请求错误
     </div>
+    <div class="error-metric-row">
+      <!-- 错误数 -->
+      <div class="metric-card warning">
+        <div class="title">错误数</div>
+        <div class="value">
+          28
+        </div>
+        <div class="bg-shape"></div>
+        <div class="icon-circle">!</div>
+      </div>
+
+      <!-- JS 错误数 -->
+      <div class="metric-card success">
+        <div class="title">JS 错误数</div>
+        <div class="value">
+          12
+        </div>
+        <div class="bg-shape wave"></div>
+        <div class="icon lightning"></div>
+      </div>
+
+      <!-- 资源错误数 -->
+      <div class="metric-card primary">
+        <div class="title">资源错误数</div>
+        <div class="value">
+          10
+        </div>
+        <div class="bg-shape mountain"></div>
+        <div class="icon image"></div>
+      </div>
+
+      <!-- HTTP 错误数 -->
+      <div class="metric-card danger">
+        <div class="title">HTTP 错误数</div>
+        <div class="value">
+          6
+        </div>
+        <div class="bg-shape"></div>
+        <div class="http-badge">HTTP</div>
+      </div>
+    </div>
     <div class="error-echarts-container">
       <el-card class="chart-card" shadow="never">
         <div class="card-header">
@@ -370,6 +411,166 @@ const handleCurrentChange = (val) => {
     font-size: 13px;
   }
 
+  $error-warning: #e6a23c;
+  $error-success: #67c23a;
+  $error-primary: #409eff;
+  $error-danger: #f56c6c;
+
+  .error-metric-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  /* 通用卡片 */
+  .metric-card {
+    position: relative;
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    height: 120px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px #ebeef5 inset;
+
+    .title {
+      font-size: 14px;
+      color: #606266;
+      font-weight: 600;
+    }
+
+    .value {
+      margin-top: 12px;
+      font-size: 36px;
+      font-weight: 700;
+
+      .up {
+        font-size: 16px;
+        margin-left: 4px;
+      }
+    }
+
+    .bg-shape {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 40%;
+      opacity: 0.15;
+      border-radius: 0 0 12px 12px;
+    }
+  }
+
+  /* 颜色主题 */
+  .warning {
+    .value {
+      color: $error-warning;
+    }
+
+    .bg-shape {
+      background: $error-warning;
+    }
+  }
+
+  .success {
+    .value {
+      color: $error-success;
+    }
+
+    .bg-shape {
+      background: linear-gradient(120deg, $error-success, transparent);
+    }
+  }
+
+  .primary {
+    .value {
+      color: $error-primary;
+    }
+
+    .bg-shape {
+      background: linear-gradient(120deg, $error-primary, transparent);
+    }
+  }
+
+  .danger {
+    .value {
+      color: $error-danger;
+    }
+
+    .bg-shape {
+      background: $error-danger;
+    }
+  }
+
+  /* 特殊背景形态 */
+  .wave {
+    clip-path: polygon(0 60%, 15% 55%, 30% 65%, 45% 50%, 60% 60%, 75% 45%, 100% 55%, 100% 100%, 0 100%);
+  }
+
+  .mountain {
+    clip-path: polygon(0 100%, 25% 60%, 40% 75%, 60% 40%, 80% 70%, 100% 55%, 100% 100%);
+  }
+
+  /* 图标 */
+  .icon-circle {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: $error-warning;
+    color: #fff;
+    font-size: 24px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .icon.lightning {
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    width: 20px;
+    height: 32px;
+    background: $error-success;
+    clip-path: polygon(40% 0, 100% 0, 60% 45%, 85% 45%, 30% 100%, 45% 55%, 15% 55%);
+  }
+
+  .icon.image {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    width: 42px;
+    height: 30px;
+    border-radius: 6px;
+    background: $error-primary;
+
+    &:before {
+      content: '';
+      position: absolute;
+      left: 6px;
+      bottom: 6px;
+      width: 12px;
+      height: 12px;
+      background: #fff;
+      border-radius: 2px;
+    }
+  }
+
+  /* HTTP 标签 */
+  .http-badge {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    background: $error-danger;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 6px 10px;
+    border-radius: 6px;
+  }
+
   .error-echarts-container {
     display: flex;
     gap: 16px;
@@ -568,7 +769,7 @@ const handleCurrentChange = (val) => {
       background-color: #f5f7fa;
     }
 
-    .el-table__row:hover > td {
+    .el-table__row:hover>td {
       background: #f0f6ff !important;
     }
   }
