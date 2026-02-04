@@ -3,7 +3,16 @@ import request from '@/utils/request'
 // 获取性能指标聚合数据
 export function getPerformanceMetricsAgg(query) {
   return request({
-    url: '/monitor-performance/metrics_agg',
+    url: '/monitor-performance/performance_metrics_agg',
+    method: 'get',
+    params: query
+  })
+}
+
+// 获取页面加载指标聚合数据
+export function getPageLoadMetricsAgg(query) {
+  return request({
+    url: '/monitor-performance/pageload_metrics_agg',
     method: 'get',
     params: query
   })

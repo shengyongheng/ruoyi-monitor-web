@@ -90,9 +90,9 @@
 
 <script setup>
 import { InfoFilled } from '@element-plus/icons-vue';
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
-import { getPerformanceMetricsAgg } from "@/api/sdk-monitor/performance"
+import { getPerformanceMetricsAgg, getPageLoadMetricsAgg } from "@/api/sdk-monitor/performance"
 import { reactive } from 'vue';
 
 const ruleFormRef = ref()
@@ -157,72 +157,52 @@ const shortcuts = [
 ]
 
 /**
- * ===== 模拟采集数据（你的实际数据）=====
- */
-const timing = {
-    fetchStart: 0,
-    domainLookupStart: 0,
-    domainLookupEnd: 0,
-    connectStart: 0,
-    connectEnd: 0,
-    secureConnectionStart: 0,
-    responseStart: 7,
-    responseEnd: 8,
-    domInteractive: 508,
-    domContentLoadedEventEnd: 511,
-    loadEventStart: 511
-}
-
-/**
  * ===== 构建瀑布阶段数据 =====
  */
-const stages = [
+const stages = ref([
     {
         name: 'DNS 查询',
-        start: timing.domainLookupStart,
-        end: timing.domainLookupEnd,
+        type: "DNS",
+        value: 0.0,
         color: '#f6c85f'
     },
     {
         name: 'TCP 建连',
-        start: timing.connectStart,
-        end: timing.connectEnd,
+        type: "TCP",
+        value: 0.0,
         color: '#ef6f6c'
     },
     {
         name: 'SSL 建连',
-        start:
-            timing.secureConnectionStart > 0
-                ? timing.secureConnectionStart
-                : timing.connectEnd,
-        end: timing.connectEnd,
+        type: "SSL",
+        value: 0.0,
         color: '#6cc4a1'
     },
     {
         name: '请求响应 TTFB',
-        start: timing.fetchStart,
-        end: timing.responseStart,
+        type: "TTFB",
+        value: 0.0,
         color: '#5b8ff9'
     },
     {
         name: '内容传输',
-        start: timing.responseStart,
-        end: timing.responseEnd,
+        type: "TRAN",
+        value: 0.0,
         color: '#73c0de'
     },
     {
         name: 'DOM 解析',
-        start: timing.responseEnd,
-        end: timing.domInteractive,
+        type: "DOM",
+        value: 0.0,
         color: '#f9e17c'
     },
     {
         name: '资源加载',
-        start: timing.domContentLoadedEventEnd,
-        end: timing.loadEventStart,
+        type: "RES",
+        value: 0.0,
         color: '#9a60b4'
     }
-]
+]);
 
 /**
  * ===== ECharts 渲染 =====
@@ -230,9 +210,11 @@ const stages = [
 const loadMetricsChartRef = ref()
 let loadMetricsEChart = null
 
-const performanceMetricsAgg = reactive({
+const performanceMetricsAgg = reactive({});
 
-});
+watch(() => stages.value, () => {
+    initLoadMetrics();
+}, { deep: true })
 
 onMounted(() => {
     getPerformanceMetricsAgg().then(res => {
@@ -242,8 +224,13 @@ onMounted(() => {
         }
         Object.assign(performanceMetricsAgg, metricsAgg)
     })
-    
-    initLoadMetrics();
+
+    getPageLoadMetricsAgg().then(res => {
+        res.data.forEach(item => {
+            stages.value.find(stage => stage.type === item.type)["value"] = item.p50Value;
+        })
+    })
+
     window.addEventListener('resize', resizeChart)
 })
 
@@ -255,10 +242,16 @@ onBeforeUnmount(() => {
 function initLoadMetrics() {
     loadMetricsEChart = echarts.init(loadMetricsChartRef.value)
 
-    const yAxisData = stages.map(i => i.name)
+    const yAxisData = stages.value.map(i => i.name)
 
-    const offsetData = stages.map(i => i.start)
-    const durationData = stages.map(i => i.end - i.start)
+    let sum = 0;
+    const offsetData = stages.value.map((stage) => {
+        const offset = sum;
+        sum += stage.value;
+        return offset;
+    });
+
+    const durationData = stages.value.map(i => i.value)
 
     const option = {
         title: {
@@ -316,7 +309,7 @@ function initLoadMetrics() {
                 data: durationData.map((v, i) => ({
                     value: v,
                     itemStyle: {
-                        color: stages[i].color
+                        color: stages.value[i].color
                     },
                     label: {
                         show: v > 0,
