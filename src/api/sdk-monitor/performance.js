@@ -1,9 +1,9 @@
 import request from '@/utils/request'
 
-// 查询会话列表
-export function listSessions(query) {
+// 获取性能指标聚合数据
+export function getPerformanceMetricsAgg(query) {
   return request({
-    url: '/monitor-userbehavior/session_list',
+    url: '/monitor-performance/metrics_agg',
     method: 'get',
     params: query
   })
