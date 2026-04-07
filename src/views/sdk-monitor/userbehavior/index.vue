@@ -188,8 +188,8 @@ const validatePass2 = (rule, value, callback) => {
 
 const ruleForm = reactive({
     datetimeRange: [
-        // new Date(2000, 10, 10, 10, 10),
-        // new Date(2000, 10, 11, 10, 10),
+        // new Date(2000, 10, 10, 10, 10, 30),
+        // new Date(2000, 10, 11, 10, 10, 58),
     ],
     username: '',
     sessionId: '',
@@ -322,7 +322,7 @@ const submitForm = (formEl) => {
     if (!formEl) return
     formEl.validate((valid) => {
         if (valid) {
-            console.log('submit!', ruleForm)
+            console.log('submit!', new Date(ruleForm.datetimeRange[0]).getTime())
         } else {
             console.log('error submit!')
         }

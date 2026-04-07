@@ -27,11 +27,20 @@ export function getRRwebPlayEvents(query) {
     })
 }
 
-// 新增参数配置
-export function addConfig(data) {
+// 获取错误数
+export function getErrorCount(query) {
     return request({
-        url: '/system/config',
-        method: 'post',
-        data: data
+        url: '/monitor-error/error_count',
+        method: 'get',
+        params: query
+    })
+}
+
+// 获取错误数趋势
+export function getErrorCountTrend(query) {
+    return request({
+        url: '/monitor-error/error_count_trend',
+        method: 'get',
+        params: query
     })
 }

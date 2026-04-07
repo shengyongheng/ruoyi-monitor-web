@@ -9,7 +9,7 @@
       <div class="metric-card warning">
         <div class="title">错误数</div>
         <div class="value">
-          28
+          {{ errorCount.allErrorCount }}
         </div>
         <div class="bg-shape"></div>
         <div class="icon-circle">!</div>
@@ -19,7 +19,7 @@
       <div class="metric-card success">
         <div class="title">JS 错误数</div>
         <div class="value">
-          12
+          {{ errorCount.jsErrorCount }}
         </div>
         <div class="bg-shape wave"></div>
         <div class="icon lightning"></div>
@@ -29,17 +29,17 @@
       <div class="metric-card primary">
         <div class="title">资源错误数</div>
         <div class="value">
-          10
+          {{ errorCount.resourceErrorCount }}
         </div>
         <div class="bg-shape mountain"></div>
         <div class="icon image"></div>
       </div>
 
-      <!-- HTTP 错误数 -->
+      <!-- 请求错误数 -->
       <div class="metric-card danger">
-        <div class="title">HTTP 错误数</div>
+        <div class="title">请求错误数</div>
         <div class="value">
-          6
+          {{ errorCount.requestErrorCount }}
         </div>
         <div class="bg-shape"></div>
         <div class="http-badge">HTTP</div>
@@ -52,12 +52,6 @@
         </div>
         <div ref="errorTrendChartRef" class="chart-container"></div>
       </el-card>
-      <el-card class="chart-card" shadow="never">
-        <div class="card-header">
-          <span class="title">错误分布</span>
-        </div>
-        <div ref="errorDistributionChartRef" class="chart-container"></div>
-      </el-card>
     </div>
     <div class="error-list-container">
       <div class="header">
@@ -67,7 +61,6 @@
         <el-button type="primary">Js 错误</el-button>
         <el-button type="primary">资源错误</el-button>
         <el-button type="primary">请求错误</el-button>
-        <el-button type="primary">跨域错误</el-button>
       </el-button-group>
       <el-table :data="errorList" style="width: 100%" stripe border :row-class-name="rowClassName">
         <el-table-column prop="type" label="类型" width="100" align="center">
@@ -138,12 +131,19 @@
 </template>
 
 <script setup>
-import { getJsErrorList } from "@/api/sdk-monitor/error";
+import { getJsErrorList, getErrorCount, getErrorCountTrend } from "@/api/sdk-monitor/error";
 import { CopyDocument, Link } from "@element-plus/icons-vue";
 import * as echarts from "echarts";
 import { ElMessage } from "element-plus";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, reactive } from "vue";
 import errorDetailDialog from "./errorDetailDialog.vue";
+
+const errorCount = reactive({
+  allErrorCount: 0,
+  jsErrorCount: 0,
+  resourceErrorCount: 0,
+  requestErrorCount: 0,
+})
 
 const errorList = ref([]);
 
@@ -154,6 +154,11 @@ const total = ref(0);
 const showErrorDetailDialog = ref(false);
 const errorDetail = ref({});
 
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", resizeChart);
+  errorTrendchart?.dispose();
+});
+
 onMounted(() => {
   getJsErrorList()
     .then((response) => {
@@ -163,6 +168,22 @@ onMounted(() => {
     .catch((error) => {
       ElMessage.error("加载错误列表失败:", error);
     });
+
+  getErrorCount()
+    .then((response) => {
+      Object.assign(errorCount, response.data)
+    })
+    .catch((error) => {
+      ElMessage.error("加载错误数失败:", error);
+    });
+  initErrorTrendChart();
+  getErrorCountTrend({
+    startDate: new Date("2026-01-05 11:21:29").getTime(),
+    endDate: new Date("2026-01-12 15:34:41").getTime(),
+  }).then(res => {
+    console.log(res);
+  })
+  window.addEventListener("resize", resizeChart);
 });
 
 // 计算属性
@@ -173,13 +194,19 @@ const criticalCount = computed(() => {
 const errorTrendChartRef = ref(null);
 let errorTrendchart = null;
 
-const xData = ["10:20", "10:30", "10:40", "10:50", "11:00", "11:10"];
+const xData = [
+  "10:20", "10:30", "10:40", "10:50", "11:00", "11:10"
+];
 
-// 按设计稿趋势构造的数据
-const corsErr = [3, 5, 3, 6, 4, 6]; // 橙
-const jsErr = [1, 2, 1, 2, 1, 3]; // 黄
-const assetErr = [0, 1, 1, 4, 2, 3]; // 蓝
-const httpErr = [1, 2, 1, 2, 2, 4]; // 绿
+const jsErr = [
+  1, 2, 1, 2, 100, 3
+]; // 黄
+const assetErr = [
+  0, 1, 1, 4, 2, 3
+]; // 蓝
+const reqErr = [
+  1, 2, 1, 2, 2, 4
+]; // 绿
 
 function initErrorTrendChart() {
   errorTrendchart = echarts.init(errorTrendChartRef.value);
@@ -202,7 +229,7 @@ function initErrorTrendChart() {
         color: "#606266",
         fontSize: 12,
       },
-      data: ["跨域", "JS错误", "资源错误", "Fetch/XHR"],
+      data: ["JS错误", "资源错误", "请求错误"],
     },
     xAxis: {
       type: "category",
@@ -213,6 +240,8 @@ function initErrorTrendChart() {
         lineStyle: { color: "#e4e7ed" },
       },
       axisLabel: {
+        interval: 'auto',
+        rotate: 45,
         color: "#909399",
         fontSize: 12,
       },
@@ -220,8 +249,6 @@ function initErrorTrendChart() {
     yAxis: {
       type: "value",
       min: 0,
-      max: 10,
-      interval: 5,
       axisTick: { show: false },
       axisLine: { show: false },
       axisLabel: {
@@ -235,16 +262,6 @@ function initErrorTrendChart() {
       },
     },
     series: [
-      {
-        name: "跨域",
-        type: "line",
-        smooth: true,
-        symbol: "circle",
-        symbolSize: 7,
-        data: corsErr,
-        lineStyle: { width: 2, color: "#E6A23C" },
-        itemStyle: { color: "#E6A23C" },
-      },
       {
         name: "JS错误",
         type: "line",
@@ -266,12 +283,12 @@ function initErrorTrendChart() {
         itemStyle: { color: "#409EFF" },
       },
       {
-        name: "Fetch/XHR",
+        name: "请求错误",
         type: "line",
         smooth: true,
         symbol: "circle",
         symbolSize: 7,
-        data: httpErr,
+        data: reqErr,
         lineStyle: { width: 2, color: "#67C23A" },
         itemStyle: { color: "#67C23A" },
       },
@@ -281,74 +298,10 @@ function initErrorTrendChart() {
   errorTrendchart.setOption(option);
 }
 
-const errorDistributionChartRef = ref(null);
-let errorDistributionChart = null;
-
-function initErrorDistributionChart() {
-  errorDistributionChart = echarts.init(errorDistributionChartRef.value);
-
-  const option = {
-    tooltip: {
-      trigger: "item",
-    },
-    legend: {
-      top: "5%",
-      left: "center",
-    },
-    series: [
-      {
-        name: "Access From",
-        type: "pie",
-        radius: ["40%", "70%"],
-        avoidLabelOverlap: false,
-        itemStyle: {
-          borderRadius: 10,
-          borderColor: "#fff",
-          borderWidth: 2,
-        },
-        label: {
-          show: false,
-          position: "center",
-        },
-        emphasis: {
-          label: {
-            show: true,
-            fontSize: 40,
-            fontWeight: "bold",
-          },
-        },
-        labelLine: {
-          show: false,
-        },
-        data: [
-          { value: 1048, name: "Js 错误" },
-          { value: 735, name: "资源错误" },
-          { value: 580, name: "请求错误" },
-          { value: 484, name: "跨域错误" },
-        ],
-      },
-    ],
-  };
-
-  errorDistributionChart.setOption(option);
-}
 
 function resizeChart() {
   errorTrendchart?.resize();
-  errorDistributionChart?.resize();
 }
-
-onMounted(() => {
-  initErrorTrendChart();
-  initErrorDistributionChart();
-  window.addEventListener("resize", resizeChart);
-});
-
-onBeforeUnmount(() => {
-  window.removeEventListener("resize", resizeChart);
-  errorTrendchart?.dispose();
-  errorDistributionChart?.dispose();
-});
 
 // 根据错误类型返回对应的tag类型
 const getTypeTagType = (type) => {
@@ -578,7 +531,7 @@ const handleCurrentChange = (val) => {
     flex-wrap: wrap;
 
     .chart-card {
-      flex: 5;
+      flex: 1;
       border-radius: 12px;
       padding: 12px 12px 16px;
       border: 1px solid #eef0f3;
@@ -615,10 +568,6 @@ const handleCurrentChange = (val) => {
         width: 100%;
         height: 260px;
       }
-    }
-
-    .chart-card:last-child {
-      flex: 3;
     }
   }
 
@@ -793,11 +742,6 @@ const handleCurrentChange = (val) => {
   .app-container {
     .error-echarts-container {
       flex-direction: column;
-
-      .chart-card,
-      .chart-card:last-child {
-        flex: 1;
-      }
 
       .chart-card .chart-container {
         height: 220px;
