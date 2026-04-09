@@ -6,8 +6,9 @@
             <!-- 加速成功率 -->
             <div class="metric-card">
                 <div class="card-title">加载成功率</div>
-                <div class="value green">95.3%</div>
-                <el-progress :percentage="95.3" :stroke-width="8" color="#67C23A" :show-text="false" />
+                <div class="value green">{{ resourceStatistics.loadSuccessRate }}%</div>
+                <el-progress :percentage="resourceStatistics.loadSuccessRate" :stroke-width="8" color="#67C23A"
+                    :show-text="false" />
             </div>
 
             <!-- 缓存命中率 -->
@@ -19,11 +20,12 @@
                     </el-icon>
                 </div>
 
-                <div class="value">72.5%</div>
+                <div class="value">{{ resourceStatistics.cacheHitRate }}</div>
 
                 <div class="multi-bar">
-                    <div class="hit" style="width: 60%"></div>
-                    <div class="miss" style="width: 12.5%"></div>
+                    <div class="hit" :style="{ width: resourceStatistics.cacheHitRate + '%' }"></div>
+                    <div class="miss" :style="{ width: (100 - resourceStatistics.cacheHitRate) + '%' }">
+                    </div>
                     <div class="empty"></div>
                 </div>
 
@@ -37,7 +39,7 @@
             <div class="metric-card">
                 <div class="card-title">资源条数</div>
                 <div class="value">
-                    731
+                    {{ resourceStatistics.resourcesNumber }}
                 </div>
 
                 <div class="mini-bars">
@@ -49,7 +51,7 @@
             <div class="metric-card">
                 <div class="card-title">平均加载时间</div>
                 <div class="value blue">
-                    432 <span class="unit">ms</span>
+                    {{ resourceStatistics.avgLoadingTime }} <span class="unit">ms</span>
                 </div>
 
                 <div class="multi-bars">
@@ -82,7 +84,7 @@
                 </div>
             </el-card>
             <div class="resource-details">
-                <div class="chart-wrapper">
+                <!-- <div class="chart-wrapper">
                     <el-card class="chart-card" shadow="never">
                         <div class="chart-title">资源加载时间（ms）</div>
                         <div ref="resourceChartRef" class="chart-container"></div>
@@ -91,15 +93,13 @@
                         <div class="title">资源错误趋势</div>
                         <div ref="errorEhartRef" class="chart-container"></div>
                     </el-card>
-                </div>
+                </div> -->
                 <el-card class="resource-card" shadow="never">
                     <!-- Header -->
                     <div class="card-header">
-                        <span class="title">详细资源列表</span>
+                        <span class="title">资源详细列表</span>
                     </div>
-
-                    <!-- Table -->
-                    <el-table :data="tableData" border stripe class="resource-table">
+                    <el-table :data="resourceTableData" border stripe class="resource-table">
                         <el-table-column prop="name" label="全称" min-width="160">
                             <template #default="{ row }">
                                 <el-link type="primary" :underline="false">
@@ -145,13 +145,21 @@
 </template>
 
 <script setup>
+import { getResourceStatistics, getResourceSessionList, getResourceDetailList } from "@/api/sdk-monitor/resource"
 import { InfoFilled } from '@element-plus/icons-vue';
 import * as echarts from 'echarts';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 
 const conversations = ref([])
 
-const tableData = ref([
+const resourceStatistics = ref({
+    loadSuccessRate: '0',
+    cacheHitRate: "0",
+    resourcesNumber: '0',
+    avgLoadingTime: '0'
+})
+
+const resourceTableData = ref([
     {
         name: 'main.js',
         type: 'JS',
@@ -240,6 +248,43 @@ const errorXData = ['10:20', '10:30', '10:40', '10:50', '11:00', '11:10']
 const error404 = [2, 2, 3, 4, 5, 3]   // 红
 const error500 = [1, 1, 1, 3, 4, 2]   // 黄
 const timeout = [0, 0, 1, 2, 6, 3]   // 蓝
+
+onMounted(() => {
+    getResourceStatistics().then(res => {
+        const { loadSuccessRate, cacheHitRate, resourcesNumber, avgLoadingTime } = res.data;
+        resourceStatistics.value = {
+            loadSuccessRate: `${loadSuccessRate * 100}`,
+            cacheHitRate: `${cacheHitRate * 100}`,
+            resourcesNumber,
+            avgLoadingTime: avgLoadingTime || '--'
+        }
+    })
+    getResourceSessionList().then(res => {
+        conversations.value = res.data;
+        conversations.value[0].active = true;
+        getResourceDetailList({
+            username: conversations.value[1]?.username,
+            sessionId: conversations.value[1]?.sessionId
+        }).then(res => {
+            console.log(res);
+        })
+    })
+    // initResourceChart()
+    // initErrorChart()
+    // window.addEventListener('resize', resizeChart)
+})
+
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', resizeChart)
+    resourceEChart?.dispose()
+    errorEhart?.dispose()
+})
+
+function setActive(target) {
+    conversations.value.forEach(i => {
+        i.active = i === target
+    })
+}
 
 function initResourceChart() {
     resourceEChart = echarts.init(resourceChartRef.value)
@@ -394,18 +439,6 @@ function initErrorChart() {
 
     errorEhart.setOption(option)
 }
-
-onMounted(() => {
-    initResourceChart()
-    initErrorChart()
-    window.addEventListener('resize', resizeChart)
-})
-
-onBeforeUnmount(() => {
-    window.removeEventListener('resize', resizeChart)
-    resourceEChart?.dispose()
-    errorEhart?.dispose()
-})
 
 function resizeChart() {
     resourceEChart?.resize()
@@ -650,7 +683,6 @@ function resizeChart() {
             }
 
             .resource-card {
-                margin-top: 24px;
                 border-radius: 12px;
                 padding: 0 0 12px;
 

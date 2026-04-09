@@ -135,7 +135,7 @@ import { getJsErrorList, getErrorCount, getErrorCountTrend } from "@/api/sdk-mon
 import { CopyDocument, Link } from "@element-plus/icons-vue";
 import * as echarts from "echarts";
 import { ElMessage } from "element-plus";
-import { computed, onBeforeUnmount, onMounted, ref, reactive } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, reactive, watch } from "vue";
 import errorDetailDialog from "./errorDetailDialog.vue";
 
 const errorCount = reactive({
@@ -143,6 +143,13 @@ const errorCount = reactive({
   jsErrorCount: 0,
   resourceErrorCount: 0,
   requestErrorCount: 0,
+})
+
+const errorTrendCount = ref({
+  xdata: [],
+  jsErrorCount: [],
+  resourceErrorCount: [],
+  requestErrorCount: []
 })
 
 const errorList = ref([]);
@@ -153,6 +160,10 @@ const total = ref(0);
 
 const showErrorDetailDialog = ref(false);
 const errorDetail = ref({});
+
+watch(() => errorTrendCount.value, () => {
+  initErrorTrendChart();
+})
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", resizeChart);
@@ -181,8 +192,11 @@ onMounted(() => {
     startDate: new Date("2026-01-05 11:21:29").getTime(),
     endDate: new Date("2026-01-12 15:34:41").getTime(),
   }).then(res => {
-    console.log(res);
-  })
+    console.log(res.data);
+    errorTrendCount.value = res.data
+  }).catch((error) => {
+    ElMessage.error("加载错误趋势数失败:", error);
+  });
   window.addEventListener("resize", resizeChart);
 });
 
@@ -193,20 +207,6 @@ const criticalCount = computed(() => {
 
 const errorTrendChartRef = ref(null);
 let errorTrendchart = null;
-
-const xData = [
-  "10:20", "10:30", "10:40", "10:50", "11:00", "11:10"
-];
-
-const jsErr = [
-  1, 2, 1, 2, 100, 3
-]; // 黄
-const assetErr = [
-  0, 1, 1, 4, 2, 3
-]; // 蓝
-const reqErr = [
-  1, 2, 1, 2, 2, 4
-]; // 绿
 
 function initErrorTrendChart() {
   errorTrendchart = echarts.init(errorTrendChartRef.value);
@@ -233,7 +233,7 @@ function initErrorTrendChart() {
     },
     xAxis: {
       type: "category",
-      data: xData,
+      data: errorTrendCount.value.xdata,
       boundaryGap: false,
       axisTick: { show: false },
       axisLine: {
@@ -268,7 +268,7 @@ function initErrorTrendChart() {
         smooth: true,
         symbol: "circle",
         symbolSize: 7,
-        data: jsErr,
+        data: errorTrendCount.value.jsErrorCount,
         lineStyle: { width: 2, color: "#F7BA2A" },
         itemStyle: { color: "#F7BA2A" },
       },
@@ -278,7 +278,7 @@ function initErrorTrendChart() {
         smooth: true,
         symbol: "circle",
         symbolSize: 7,
-        data: assetErr,
+        data: errorTrendCount.value.resourceErrorCount,
         lineStyle: { width: 2, color: "#409EFF" },
         itemStyle: { color: "#409EFF" },
       },
@@ -288,7 +288,7 @@ function initErrorTrendChart() {
         smooth: true,
         symbol: "circle",
         symbolSize: 7,
-        data: reqErr,
+        data: errorTrendCount.value.requestErrorCount,
         lineStyle: { width: 2, color: "#67C23A" },
         itemStyle: { color: "#67C23A" },
       },
